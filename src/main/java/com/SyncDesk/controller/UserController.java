@@ -1,9 +1,9 @@
 package com.SyncDesk.controller;
 
 
-import com.SyncDesk.dto.UserDTO;
-import com.SyncDesk.dto.UserLoginDTO;
-import com.SyncDesk.dto.UserRegistrationDTO;
+import com.SyncDesk.dto.user.UserDTO;
+import com.SyncDesk.dto.user.UserLoginDTO;
+import com.SyncDesk.dto.user.UserRegistrationDTO;
 import com.SyncDesk.service.UserServiceImpl;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
