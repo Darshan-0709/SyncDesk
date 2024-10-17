@@ -1,9 +1,9 @@
 package com.SyncDesk.service;
 
-import com.SyncDesk.dto.UserLoginDTO;
-import com.SyncDesk.dto.UserRegistrationDTO;
+import com.SyncDesk.dto.user.UserLoginDTO;
+import com.SyncDesk.dto.user.UserRegistrationDTO;
 import com.SyncDesk.entity.User;
-import com.SyncDesk.dto.UserDTO;
+import com.SyncDesk.dto.user.UserDTO;
 
 import java.util.List;
 
