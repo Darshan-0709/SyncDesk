@@ -1,10 +1,11 @@
 package com.SyncDesk.service;
 
-import com.SyncDesk.dto.UserDTO;
-import com.SyncDesk.dto.UserLoginDTO;
-import com.SyncDesk.dto.UserRegistrationDTO;
+import com.SyncDesk.dto.user.UserDTO;
+import com.SyncDesk.dto.user.UserLoginDTO;
+import com.SyncDesk.dto.user.UserRegistrationDTO;
 import com.SyncDesk.entity.User;
 import com.SyncDesk.repository.UserRepository;
+import com.SyncDesk.utils.DTOConverter;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -12,6 +13,8 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.stream.Collectors;
+
+import static com.SyncDesk.utils.DTOConverter.convertToUserDTO;
 
 @Service
 public class UserServiceImpl implements UserService{
@@ -39,7 +42,7 @@ public class UserServiceImpl implements UserService{
         user.setEmail(userRegistrationDTO.getEmail());
         user.setPassword(passwordEncoder.encode(userRegistrationDTO.getPassword()));
         user = userRepository.save(user);
-        return ConvertToDTO(user);
+        return convertToUserDTO(user);
     }
 
     @Override
@@ -48,11 +51,7 @@ public class UserServiceImpl implements UserService{
         if(user == null || !passwordEncoder.matches(userLoginDTO.getPassword(), user.getPassword())){
             throw new RuntimeException("Invalid Credentials");
         }
-        return ConvertToDTO(user);
-    }
-
-    private UserDTO ConvertToDTO(User user) {
-        return new UserDTO(user.getId(), user.getFullName(), user.getEmail());
+        return convertToUserDTO(user);
     }
 
     @Override
@@ -64,14 +63,14 @@ public class UserServiceImpl implements UserService{
     @Override
     public UserDTO findById(Long id) {
         return userRepository.findById(id)
-                .map(this::ConvertToDTO)
+                .map(DTOConverter::convertToUserDTO)
                 .orElseThrow(() -> new RuntimeException("No user found"));
     }
 
     @Override
     public List<UserDTO> fetchAllUsers() {
         List<User> users = userRepository.findAll();
-        return users.stream().map(this::ConvertToDTO).collect(Collectors.toList());
+        return users.stream().map(DTOConverter::convertToUserDTO).collect(Collectors.toList());
     }
 
     @Override
