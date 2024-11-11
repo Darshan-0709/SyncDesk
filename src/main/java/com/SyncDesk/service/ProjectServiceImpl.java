@@ -32,7 +32,7 @@ public class ProjectServiceImpl implements ProjectService{
         }
         Project project = new Project();
         project.setName(createProjectDTO.getName());
-        if(!createProjectDTO.getDescription().isEmpty()){
+        if(createProjectDTO.getDescription() != null && !createProjectDTO.getDescription().isEmpty()){
             project.setDescription(createProjectDTO.getDescription());
         }
         project.setStartDate(createProjectDTO.getStartDate());
