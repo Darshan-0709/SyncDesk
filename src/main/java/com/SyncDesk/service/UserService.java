@@ -1,5 +1,6 @@
 package com.SyncDesk.service;
 
+import com.SyncDesk.dto.user.LoginResponseDTO;
 import com.SyncDesk.dto.user.UserLoginDTO;
 import com.SyncDesk.dto.user.UserRegistrationDTO;
 import com.SyncDesk.entity.User;
@@ -10,7 +11,7 @@ import java.util.List;
 
 public interface UserService {
     UserDTO registerUser(UserRegistrationDTO userRegistrationDTO);
-    UserDTO loginUser(UserLoginDTO userLoginDTO);
+    LoginResponseDTO loginUser(UserLoginDTO userLoginDTO);
     User findByEmail(String email);
     UserDTO findById(Long id);
     List<UserDTO> fetchAllUsers();
