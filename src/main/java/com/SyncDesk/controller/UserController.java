@@ -1,6 +1,7 @@
 package com.SyncDesk.controller;
 
 
+import com.SyncDesk.dto.user.LoginResponseDTO;
 import com.SyncDesk.dto.user.UserDTO;
 import com.SyncDesk.dto.user.UserLoginDTO;
 import com.SyncDesk.dto.user.UserRegistrationDTO;
@@ -9,8 +10,10 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -39,7 +42,12 @@ public class UserController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<?> registerUser(@Valid @RequestBody UserRegistrationDTO userDTO){
+    public ResponseEntity<?> registerUser(@Valid @RequestBody UserRegistrationDTO userDTO, BindingResult result){
+        if (result.hasErrors()) {
+            Map<String, String> errors = new HashMap<>();
+            result.getFieldErrors().forEach(error -> errors.put(error.getField(), error.getDefaultMessage()));
+            return ResponseEntity.badRequest().body(errors);
+        }
         try{
             UserDTO registeredUser = userService.registerUser(userDTO);
             return new ResponseEntity<>(registeredUser, HttpStatus.CREATED);
@@ -51,12 +59,13 @@ public class UserController {
     @PostMapping("/login")
     public ResponseEntity<?> loginUser(@Valid @RequestBody UserLoginDTO userLoginDTO){
         try{
-            UserDTO loginUser = userService.loginUser(userLoginDTO);
-            return new ResponseEntity<>(loginUser, HttpStatus.OK);
-        }catch (Exception e){
+            LoginResponseDTO response = userService.loginUser(userLoginDTO);
+            return new ResponseEntity<>(response, HttpStatus.OK);
+        } catch (Exception e){
             return new ResponseEntity<>(e.getMessage(), HttpStatus.UNAUTHORIZED);
         }
     }
+
 
     @PutMapping("/{id}")
     public ResponseEntity<String> updateUser(@PathVariable Long id, @RequestBody UserDTO userDTO){
