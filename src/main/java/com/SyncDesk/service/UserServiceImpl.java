@@ -1,5 +1,6 @@
 package com.SyncDesk.service;
 
+import com.SyncDesk.dto.user.LoginResponseDTO;
 import com.SyncDesk.dto.user.UserDTO;
 import com.SyncDesk.dto.user.UserLoginDTO;
 import com.SyncDesk.dto.user.UserRegistrationDTO;
@@ -20,13 +21,14 @@ import static com.SyncDesk.utils.DTOConverter.convertToUserDTO;
 public class UserServiceImpl implements UserService{
 
     private final UserRepository userRepository;
+    private final JWTService jwtService;
 
     @Autowired
     PasswordEncoder passwordEncoder;
 
-    @Autowired
-    public UserServiceImpl(UserRepository userRepository) {
+    public UserServiceImpl(UserRepository userRepository, JWTService jwtService) {
         this.userRepository = userRepository;
+        this.jwtService = jwtService;
     }
 
     @Override
@@ -46,13 +48,18 @@ public class UserServiceImpl implements UserService{
     }
 
     @Override
-    public UserDTO loginUser(UserLoginDTO userLoginDTO) {
+    public LoginResponseDTO loginUser(UserLoginDTO userLoginDTO) {
         User user = findByEmail(userLoginDTO.getEmail());
         if(user == null || !passwordEncoder.matches(userLoginDTO.getPassword(), user.getPassword())){
             throw new RuntimeException("Invalid Credentials");
         }
-        return convertToUserDTO(user);
+
+        String token = jwtService.generateToken(user.getEmail());
+        UserDTO userDTO = convertToUserDTO(user);
+
+        return new LoginResponseDTO(userDTO, token);
     }
+
 
     @Override
     public User findByEmail(String email) {
