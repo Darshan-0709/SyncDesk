@@ -26,7 +26,7 @@ public class DTOConverter {
 
         // Use the static UserDTO converter
         UserDTO userDTO = convertToUserDTO(project.getUser());
-        projectDTO.setUser(userDTO);
+        projectDTO.setAdmin(userDTO);
 
         projectDTO.setStartDate(project.getStartDate());
 
@@ -36,6 +36,5 @@ public class DTOConverter {
 
         return projectDTO;
     }
-
 
 }
