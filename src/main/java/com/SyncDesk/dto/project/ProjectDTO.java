@@ -11,7 +11,7 @@ import java.time.LocalDate;
 public class ProjectDTO {
     public Long id;
     public String name;
-    public UserDTO user;
+    public UserDTO admin;
     public String description;
     public LocalDate startDate;
     public LocalDate endDate;
