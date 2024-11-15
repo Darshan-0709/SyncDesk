@@ -12,6 +12,9 @@ import com.SyncDesk.repository.ProjectRepository;
 import com.SyncDesk.repository.RoleRepository;
 import com.SyncDesk.repository.UserRepository;
 import com.SyncDesk.utils.DTOConverter;
+import com.SyncDesk.utils.NoProjectFoundException;
+import com.SyncDesk.utils.NoSuchUserFoundException;
+import com.SyncDesk.utils.ProjectAlreadyExistsException;
 import jakarta.transaction.Transactional;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -39,62 +42,68 @@ public class ProjectServiceImpl implements ProjectService{
 
     @Override
     @Transactional
-    public ProjectDTO createProject(CreateProjectDTO createProjectDTO) {
-        if(projectRepository.existsByName(createProjectDTO.getName())){
-            throw new ProjectAlreadyExists("Project already Exists");
+    public ProjectDTO createProject(CreateProjectDTO createProjectDTO) throws ProjectAlreadyExistsException {
+        if(projectRepository.existsByName(createProjectDTO.getName())) {
+            throw new ProjectAlreadyExistsException("Project already exists");
         }
 
         Project project = new Project();
         project.setName(createProjectDTO.getName());
-        if(createProjectDTO.getDescription() != null && !createProjectDTO.getDescription().isEmpty()){
+
+        if (createProjectDTO.getDescription() != null && !createProjectDTO.getDescription().isEmpty()) {
             project.setDescription(createProjectDTO.getDescription());
         }
+
         project.setStartDate(createProjectDTO.getStartDate());
-        if(createProjectDTO.getEndDate() != null){
+        if (createProjectDTO.getEndDate() != null) {
             project.setEndDate(createProjectDTO.getEndDate());
         }
 
+        // Retrieve current user's email from SecurityContext
         String currentUserEmail = null;
-        Object userPrincipal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        if(userPrincipal instanceof UserDetails){
-            currentUserEmail = ((UserDetails) userPrincipal).getUsername();
-        }else{
-            currentUserEmail = userPrincipal.toString();
+        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        if (principal instanceof UserDetails) {
+            currentUserEmail = ((UserDetails) principal).getUsername();
+        } else {
+            currentUserEmail = principal.toString();
         }
 
-        User currentUser = userRepository
+        // Retrieve User entity based on current user's email
+        User user = userRepository
                 .findByEmail(currentUserEmail)
-                .orElseThrow(() -> new NoSuchUserFoundException("Unauthorized access"));
+                .orElseThrow(() -> new NoSuchUserFoundException("User not found"));
 
-        project.setUser(currentUser);
+        // Set user as the project admin
+        project.setUser(user);
         project = projectRepository.save(project);
 
-        Role adminRole = roleRepository.findByName("ADMIN")
+        // Additional logic to add the user as a ProjectMember with the ADMIN role
+        Role adminRole = roleRepository
+                .findByName("ADMIN")
                 .orElseThrow(() -> new RuntimeException("ADMIN role not found"));
 
         ProjectMember projectMember = new ProjectMember();
-        projectMember.setUser(currentUser);
+        projectMember.setUser(user);
         projectMember.setProject(project);
         projectMember.setRole(adminRole);
         projectMember.setJoinedAt(LocalDate.now());
-
         projectMemberRepository.save(projectMember);
 
         return convertToProjectDTO(project);
     }
 
     @Override
-    public ProjectDTO getById(Long id) {
+    public ProjectDTO getById(Long id) throws NoProjectFoundException {
         Project project = projectRepository
                 .findById(id)
-                .orElseThrow(() -> new NoSuchProjectFound("Unable to fetch project"));
+                .orElseThrow(() -> new NoProjectFoundException("Unable to fetch project"));
         return convertToProjectDTO(project);
     }
 
     @Override
-    public ProjectDTO updateProject(Long id, UpdateProjectDTO updateProjectDTO) {
+    public ProjectDTO updateProject(Long id, UpdateProjectDTO updateProjectDTO) throws NoProjectFoundException {
         Project project = projectRepository.findById(id)
-                .orElseThrow(() -> new NoSuchProjectFound("No such project found"));
+                .orElseThrow(() -> new NoProjectFoundException("No such project found"));
         project.setName(updateProjectDTO.getName());
         if(!updateProjectDTO.getDescription().isEmpty()){
             project.setDescription(updateProjectDTO.getDescription());
@@ -119,18 +128,5 @@ public class ProjectServiceImpl implements ProjectService{
     @Override
     public List<ProjectDTO> getAllProject() {
         return projectRepository.findAll().stream().map(DTOConverter::convertToProjectDTO).toList();
-    }
-
-
-    private static class NoSuchProjectFound extends RuntimeException {
-        public NoSuchProjectFound(String message) {
-            super(message);
-        }
-    }
-
-    private static class ProjectAlreadyExists extends RuntimeException {
-        public ProjectAlreadyExists(String message) {
-            super(message);
-        }
     }
 }
