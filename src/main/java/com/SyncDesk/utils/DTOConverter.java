@@ -1,8 +1,10 @@
 package com.SyncDesk.utils;
 
 import com.SyncDesk.dto.project.ProjectDTO;
+import com.SyncDesk.dto.project_member.ProjectMemberDTO;
 import com.SyncDesk.dto.user.UserDTO;
 import com.SyncDesk.entity.Project;
+import com.SyncDesk.entity.ProjectMember;
 import com.SyncDesk.entity.User;
 
 public class DTOConverter {
@@ -36,5 +38,16 @@ public class DTOConverter {
 
         return projectDTO;
     }
+
+    public static ProjectMemberDTO convertToProjectMemberDTO(ProjectMember projectMember) {
+        ProjectMemberDTO projectMemberDTO = new ProjectMemberDTO();
+        projectMemberDTO.setId(projectMember.getId());
+        projectMemberDTO.setUser(convertToUserDTO(projectMember.getUser()));
+        projectMemberDTO.setProjectId(projectMember.getProject().getId());
+        projectMemberDTO.setRoleName(projectMember.getRole().getName());
+        projectMemberDTO.setJoinedAt(projectMember.getJoinedAt());
+        return projectMemberDTO;
+    }
+
 
 }
