@@ -1,9 +1,12 @@
 package com.SyncDesk.controller;
 
+import com.SyncDesk.common.ApiResponse;
 import com.SyncDesk.dto.project.CreateProjectDTO;
 import com.SyncDesk.dto.project.ProjectDTO;
 import com.SyncDesk.dto.project.UpdateProjectDTO;
 import com.SyncDesk.service.ProjectServiceImpl;
+import com.SyncDesk.utils.NoProjectFoundException;
+import com.SyncDesk.utils.ProjectAlreadyExistsException;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -22,48 +25,52 @@ public class ProjectController {
     }
 
     @GetMapping()
-    public ResponseEntity<?> getAllProject(){
+    public ResponseEntity<ApiResponse<List<ProjectDTO>>> getAllProject() {
         List<ProjectDTO> projects = projectService.getAllProject();
-        return new ResponseEntity<>(projects, HttpStatus.OK);
+        return ResponseEntity.ok(new ApiResponse<>("Projects fetched successfully", projects));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<?> getById(@PathVariable Long id){
-        try{
+    public ResponseEntity<ApiResponse<ProjectDTO>> getById(@PathVariable Long id) {
+        try {
             ProjectDTO projectDTO = projectService.getById(id);
-            return new ResponseEntity<>(projectDTO, HttpStatus.OK);
-        }catch (Exception e){
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
+            return ResponseEntity.ok(new ApiResponse<>("Project fetched successfully", projectDTO));
+        } catch (NoProjectFoundException | Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(new ApiResponse<>(e.getMessage(), null));
         }
     }
 
     @PostMapping()
-    public ResponseEntity<?> createProject(@Valid @RequestBody CreateProjectDTO createProjectDTO){
-        try{
+    public ResponseEntity<ApiResponse<ProjectDTO>> createProject(@Valid @RequestBody CreateProjectDTO createProjectDTO) {
+        try {
             ProjectDTO projectDTO = projectService.createProject(createProjectDTO);
-            return new ResponseEntity<>(projectDTO, HttpStatus.CREATED);
-        }catch (Exception e){
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(new ApiResponse<>("Project created successfully", projectDTO));
+        } catch (ProjectAlreadyExistsException | Exception e) {
+            return ResponseEntity.badRequest().body(new ApiResponse<>(e.getMessage(), null));
         }
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateProject(@Valid @PathVariable Long id, @RequestBody UpdateProjectDTO updateProjectDTO){
-        try{
+    public ResponseEntity<ApiResponse<ProjectDTO>> updateProject(@Valid @PathVariable Long id, @RequestBody UpdateProjectDTO updateProjectDTO) {
+        try {
             ProjectDTO projectDTO = projectService.updateProject(id, updateProjectDTO);
-            return new ResponseEntity<>(projectDTO, HttpStatus.OK);
-        }catch (Exception e){
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
+            return ResponseEntity.ok(new ApiResponse<>("Project updated successfully", projectDTO));
+        } catch (NoProjectFoundException | Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(new ApiResponse<>(e.getMessage(), null));
         }
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<String> deleteProject(@PathVariable Long id){
-        try{
+    public ResponseEntity<ApiResponse<String>> deleteProject(@PathVariable Long id) {
+        try {
             boolean isDeleted = projectService.deleteProject(id);
-            return new ResponseEntity<>("Project deleted successfully", HttpStatus.OK);
-        }catch (Exception e){
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+            return ResponseEntity.ok(new ApiResponse<>("Project deleted successfully", null));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse<>(e.getMessage(), null));
         }
     }
 
