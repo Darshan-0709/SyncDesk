@@ -13,7 +13,9 @@ import java.time.LocalDate;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "project_member")
+@Table(name = "project_member", uniqueConstraints = {
+        @UniqueConstraint(columnNames = {"user_id", "project_id"})
+})
 public class ProjectMember {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -27,7 +29,7 @@ public class ProjectMember {
     @JoinColumn(name = "project_id", referencedColumnName = "id", nullable = false)
     private Project project;
 
-    @OneToOne
+    @ManyToOne
     @JoinColumn(name = "role_id", referencedColumnName = "id", nullable = false)
     private Role role;
 
