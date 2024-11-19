@@ -1,8 +1,6 @@
 package com.SyncDesk.repository;
 
-import com.SyncDesk.entity.Project;
 import com.SyncDesk.entity.ProjectMember;
-import com.SyncDesk.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
@@ -14,6 +12,8 @@ public interface ProjectMemberRepository extends JpaRepository<ProjectMember, Lo
 
     Optional<ProjectMember> findByUserId(Long id);
 
-    boolean existsByProjectAndUser(Project project, User memberToAdd);
+    boolean existsByProjectIdAndUserId(Long project, Long memberToAdd);
+
+    Optional<ProjectMember> findByUserIdAndProjectId(Long id, Long projectId);
 }
 
