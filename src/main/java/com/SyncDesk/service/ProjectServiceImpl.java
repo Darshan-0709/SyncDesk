@@ -129,4 +129,8 @@ public class ProjectServiceImpl implements ProjectService{
     public List<ProjectDTO> getAllProject() {
         return projectRepository.findAll().stream().map(DTOConverter::convertToProjectDTO).toList();
     }
+
+    public boolean existsById(Long id){
+        return projectRepository.existsById(id);
+    }
 }
