@@ -1,7 +1,6 @@
 package com.SyncDesk.service;
 
 import com.SyncDesk.dto.project_member.AddMemberDTO;
-import com.SyncDesk.dto.project_member.ChangeRoleDTO;
 import com.SyncDesk.dto.project_member.ProjectMemberDTO;
 import com.SyncDesk.entity.Project;
 import com.SyncDesk.entity.ProjectMember;
@@ -12,7 +11,6 @@ import com.SyncDesk.repository.ProjectRepository;
 import com.SyncDesk.repository.RoleRepository;
 import com.SyncDesk.repository.UserRepository;
 import com.SyncDesk.utils.*;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,12 +27,14 @@ public class ProjectMemberServiceImpl implements ProjectMemberService{
     private final UserRepository userRepository;
     private final ProjectRepository projectRepository;
     private final RoleRepository roleRepository;
+    private final AuthService authService;
 
-    public ProjectMemberServiceImpl(ProjectMemberRepository projectMemberRepository, UserRepository userRepository, ProjectRepository projectRepository, RoleRepository roleRepository) {
+    public ProjectMemberServiceImpl(ProjectMemberRepository projectMemberRepository, UserRepository userRepository, ProjectRepository projectRepository, RoleRepository roleRepository, AuthService authService) {
         this.projectMemberRepository = projectMemberRepository;
         this.userRepository = userRepository;
         this.projectRepository = projectRepository;
         this.roleRepository = roleRepository;
+        this.authService = authService;
     }
 
     @Override
@@ -55,10 +55,7 @@ public class ProjectMemberServiceImpl implements ProjectMemberService{
     public ProjectMemberDTO addMember(Long id, AddMemberDTO member) {
         validateRole(member.getRole());
 
-        String currentUserEmail = getCurrentUserEmail();
-
-        User currentUser = getCurrentUser(currentUserEmail);
-        ProjectMember currentMember = getCurrentMember(currentUser.getId());
+        ProjectMember currentMember = getCurrentMember();
 
         Project project = getProjectById(id);
 
@@ -72,7 +69,7 @@ public class ProjectMemberServiceImpl implements ProjectMemberService{
         User memberToAdd = userRepository.findByEmail(member.getEmail())
                 .orElseThrow(() -> new NoSuchUserFoundException("User not found. Please ask them to register on the platform."));
 
-        if (projectMemberRepository.existsByProjectAndUser(project, memberToAdd)) {
+        if (projectMemberRepository.existsByProjectIdAndUserId(project.getId(), memberToAdd.getId())) {
             throw new MemberAlreadyExistsException("User is already a member of this project.");
         }
 
@@ -88,10 +85,7 @@ public class ProjectMemberServiceImpl implements ProjectMemberService{
 
     public ProjectMemberDTO editMember(Long id, String newRole) {
 
-        String currentUserEmail = getCurrentUserEmail();
-
-        User currentUser = getCurrentUser(currentUserEmail);
-        ProjectMember currentMember = getCurrentMember(currentUser.getId());
+        ProjectMember currentMember = getCurrentMember();
 
         Role memberRole = getMemberRole(newRole);
 
@@ -116,7 +110,8 @@ public class ProjectMemberServiceImpl implements ProjectMemberService{
     }
 
 
-    private ProjectMember getCurrentMember(Long id) {
+    private ProjectMember getCurrentMember() {
+        Long id = authService.getCurrentUser().getId();
         return projectMemberRepository.findByUserId(id)
                 .orElseThrow(() -> new RuntimeException("You are not a member of this project"));
     }
@@ -129,15 +124,6 @@ public class ProjectMemberServiceImpl implements ProjectMemberService{
     private Project getProjectById(Long id) {
         return projectRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("No project found with the provided ID"));
-    }
-
-    private User getCurrentUser(String currentUserEmail) {
-        return userRepository.findByEmail(currentUserEmail)
-                .orElseThrow(() -> new NoSuchUserFoundException("Unauthorized access"));
-    }
-
-    private String getCurrentUserEmail() {
-        return SecurityContextHolder.getContext().getAuthentication().getName();
     }
 
     private void validateRole(String roleName) {
