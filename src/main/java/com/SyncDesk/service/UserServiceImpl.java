@@ -7,6 +7,7 @@ import com.SyncDesk.dto.user.UserRegistrationDTO;
 import com.SyncDesk.entity.User;
 import com.SyncDesk.repository.UserRepository;
 import com.SyncDesk.utils.DTOConverter;
+import com.SyncDesk.utils.EmailAlreadyExistsException;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -34,7 +35,7 @@ public class UserServiceImpl implements UserService{
     @Override
     public UserDTO registerUser(UserRegistrationDTO userRegistrationDTO) {
         if(userRepository.existsByEmail(userRegistrationDTO.getEmail())){
-            throw new RuntimeException("Email is already in use");
+            throw new EmailAlreadyExistsException("Email is already in use");
         }
         if(!userRegistrationDTO.getPassword().equals(userRegistrationDTO.getConfirmedPassword())){
             throw new RuntimeException("Password does not match");
@@ -59,6 +60,7 @@ public class UserServiceImpl implements UserService{
 
         return new LoginResponseDTO(userDTO, token);
     }
+
 
 
     @Override
