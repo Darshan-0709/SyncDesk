@@ -7,6 +7,7 @@ import com.SyncDesk.dto.project.UpdateProjectDTO;
 import com.SyncDesk.service.ProjectServiceImpl;
 import com.SyncDesk.utils.NoProjectFoundException;
 import com.SyncDesk.utils.ProjectAlreadyExistsException;
+import com.SyncDesk.utils.ResourceNotFoundException;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -24,11 +25,13 @@ public class ProjectController {
         this.projectService = projectService;
     }
 
+
     @GetMapping()
-    public ResponseEntity<ApiResponse<List<ProjectDTO>>> getAllProject() {
-        List<ProjectDTO> projects = projectService.getAllProject();
-        return ResponseEntity.ok(new ApiResponse<>("Projects fetched successfully", projects));
+    public ResponseEntity<List<ProjectDTO>> getProjectsForCurrentUser() {
+        List<ProjectDTO> projects = projectService.getProjectsForCurrentUser();
+        return ResponseEntity.ok(projects);
     }
+
 
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<ProjectDTO>> getById(@PathVariable Long id) {
@@ -57,9 +60,11 @@ public class ProjectController {
         try {
             ProjectDTO projectDTO = projectService.updateProject(id, updateProjectDTO);
             return ResponseEntity.ok(new ApiResponse<>("Project updated successfully", projectDTO));
-        } catch (NoProjectFoundException | Exception e) {
+        } catch (Exception e) {
             return ResponseEntity.badRequest()
                     .body(new ApiResponse<>(e.getMessage(), null));
+        } catch (ResourceNotFoundException e) {
+            throw new RuntimeException(e);
         }
     }
 
