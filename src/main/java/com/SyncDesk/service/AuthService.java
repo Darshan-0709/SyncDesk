@@ -2,8 +2,8 @@ package com.SyncDesk.service;
 
 import com.SyncDesk.dto.user.UserDTO;
 import com.SyncDesk.entity.User;
-import com.SyncDesk.entity.UserPrincipal;
 import com.SyncDesk.repository.UserRepository;
+import com.SyncDesk.utils.DTOConverter;
 import com.SyncDesk.utils.NoSuchUserFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -16,12 +16,9 @@ import org.springframework.stereotype.Service;
 @Service
 public class AuthService {
 
-
     private final AuthenticationManager authenticationManager;
     private final JWTService jwtService;
     private final UserRepository userRepository;
-
-
 
     @Autowired
     public AuthService(AuthenticationManager authenticationManager, JWTService jwtService, UserServiceImpl userService, UserRepository userRepository, MyUserDetailsService userDetailsService) {
@@ -44,6 +41,18 @@ public class AuthService {
         if (auth != null && auth.getPrincipal() instanceof UserDetails userDetails) {
             String email = userDetails.getUsername();
             return userRepository.findByEmail(email).orElseThrow(() -> new NoSuchUserFoundException("User not authenticated"));
+        }
+        throw new NoSuchUserFoundException("User not authenticated");
+    }
+
+    public UserDTO getCurrentUserDetails() {
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof UserDetails userDetails) {
+            String email = userDetails.getUsername();
+            User user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new NoSuchUserFoundException("User not authenticated"));
+            return DTOConverter.convertToUserDTO(user); // Assuming you have a DTOConverter utility
         }
         throw new NoSuchUserFoundException("User not authenticated");
     }
