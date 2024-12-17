@@ -1,5 +1,7 @@
 package com.SyncDesk.entity;
 
+
+
 import jakarta.persistence.*;
 import lombok.*;
 
