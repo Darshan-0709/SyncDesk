@@ -1,6 +1,7 @@
 package com.SyncDesk.service;
 
 import com.SyncDesk.dto.project_member.AddMemberDTO;
+import com.SyncDesk.dto.project_member.ChangeRoleDTO;
 import com.SyncDesk.dto.project_member.ProjectMemberDTO;
 import com.SyncDesk.entity.Project;
 import com.SyncDesk.entity.ProjectMember;
@@ -54,15 +55,22 @@ public class ProjectMemberServiceImpl implements ProjectMemberService{
     @Transactional
     public ProjectMemberDTO addMember(Long id, AddMemberDTO member) {
         validateRole(member.getRole());
-
-        ProjectMember currentMember = getCurrentMember();
+        ProjectMember currentMember = getCurrentMember(id);
+        System.out.println();
+        System.out.println();
+        System.out.println(currentMember.getUser().getEmail());
 
         Project project = getProjectById(id);
-
+        System.out.println(project.getId());
+        System.out.println();
+        System.out.println();
         Role memberRole = getMemberRole(member.getRole());
+        System.out.println(memberRole.getName());
+
 
 
         if (!isAuthorized(currentMember.getRole().getName())) {
+            System.out.println("Only admins or project managers can add new members.");
             throw new RuntimeException("Only admins or project managers can add new members.");
         }
 
@@ -70,6 +78,7 @@ public class ProjectMemberServiceImpl implements ProjectMemberService{
                 .orElseThrow(() -> new NoSuchUserFoundException("User not found. Please ask them to register on the platform."));
 
         if (projectMemberRepository.existsByProjectIdAndUserId(project.getId(), memberToAdd.getId())) {
+            System.out.println("User is already a member of this project.");
             throw new MemberAlreadyExistsException("User is already a member of this project.");
         }
 
@@ -83,18 +92,21 @@ public class ProjectMemberServiceImpl implements ProjectMemberService{
         return convertToProjectMemberDTO(projectMember);
     }
 
-    public ProjectMemberDTO editMember(Long id, String newRole) {
+    @Override
+    public ProjectMemberDTO editMember(Long id, ChangeRoleDTO changeRoleDTO) {
 
-        ProjectMember currentMember = getCurrentMember();
+        ProjectMember currentMember = getCurrentMember(id);
+        System.out.println("current member id: " +currentMember.getId());
 
-        Role memberRole = getMemberRole(newRole);
-
+        Role memberRole = getMemberRole(changeRoleDTO.getRole());
+        System.out.println("dtoRole: " + currentMember.getRole().getName());
         if (!isAuthorized(currentMember.getRole().getName(), memberRole.getName())) {
             throw new RuntimeException("Only admins or project managers can change members role.");
         }
 
-        ProjectMember memberToChange = projectMemberRepository.findById(id)
+        ProjectMember memberToChange = projectMemberRepository.findByUserIdAndProjectId(changeRoleDTO.getId(), id)
                 .orElseThrow(() ->  new RuntimeException("No member found"));
+        System.out.println("member to change: " + memberToChange.getUser().getEmail());
 
         memberToChange.setRole(memberRole);
         projectMemberRepository.save(memberToChange);
@@ -110,30 +122,41 @@ public class ProjectMemberServiceImpl implements ProjectMemberService{
     }
 
 
-    private ProjectMember getCurrentMember() {
-        Long id = authService.getCurrentUser().getId();
-        return projectMemberRepository.findByUserId(id)
-                .orElseThrow(() -> new RuntimeException("You are not a member of this project"));
+
+    private ProjectMember getCurrentMember(Long projectId) {
+        Long userId = authService.getCurrentUser().getId();
+        return projectMemberRepository.findByUserIdAndProjectId(userId, projectId)
+                .orElseThrow(() -> new RuntimeException("You are not a member of this project."));
     }
 
+
     private Role getMemberRole(String role) {
+        System.out.println(role);
         return roleRepository.findByName(role)
                 .orElseThrow(() -> new RuntimeException("Invalid role specified"));
     }
 
     private Project getProjectById(Long id) {
+        System.out.println(id);
         return projectRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("No project found with the provided ID"));
     }
 
     private void validateRole(String roleName) {
+        System.out.println(roleName);
         if ("Admin".equalsIgnoreCase(roleName)) {
             throw new RuntimeException("Admin role cannot be assigned");
         }
     }
 
     private boolean isAuthorized(String role) {
+        System.out.println("is" + role);
         return "Admin".equals(role) || "Manager".equals(role);
     }
 
+
+    public ProjectMemberDTO getOneByProjectId(Long id) {
+        ProjectMember currentMember = getCurrentMember(id);
+        return DTOConverter.convertToProjectMemberDTO(currentMember);
+    }
 }
