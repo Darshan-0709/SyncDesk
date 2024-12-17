@@ -11,17 +11,16 @@ import com.SyncDesk.repository.ProjectMemberRepository;
 import com.SyncDesk.repository.ProjectRepository;
 import com.SyncDesk.repository.RoleRepository;
 import com.SyncDesk.repository.UserRepository;
-import com.SyncDesk.utils.DTOConverter;
-import com.SyncDesk.utils.NoProjectFoundException;
-import com.SyncDesk.utils.NoSuchUserFoundException;
-import com.SyncDesk.utils.ProjectAlreadyExistsException;
+import com.SyncDesk.utils.*;
 import jakarta.transaction.Transactional;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static com.SyncDesk.utils.DTOConverter.convertToProjectDTO;
 
@@ -32,17 +31,21 @@ public class ProjectServiceImpl implements ProjectService{
     private final UserRepository userRepository;
     private final ProjectMemberRepository projectMemberRepository;
     private final RoleRepository roleRepository;
+    private final AuthService authService;
 
-    public ProjectServiceImpl(ProjectRepository projectRepository, UserRepository userRepository, ProjectRepository projectMemberRepository, ProjectMemberRepository projectMemberRepository1, RoleRepository roleRepository) {
+    public ProjectServiceImpl(ProjectRepository projectRepository, UserRepository userRepository, ProjectRepository projectMemberRepository, ProjectMemberRepository projectMemberRepository1, RoleRepository roleRepository, AuthService authService) {
         this.projectRepository = projectRepository;
         this.userRepository = userRepository;
         this.projectMemberRepository = projectMemberRepository1;
         this.roleRepository = roleRepository;
+        this.authService = authService;
     }
 
     @Override
     @Transactional
     public ProjectDTO createProject(CreateProjectDTO createProjectDTO) throws ProjectAlreadyExistsException {
+        User currentUser = authService.getCurrentUser();
+
         if(projectRepository.existsByName(createProjectDTO.getName())) {
             throw new ProjectAlreadyExistsException("Project already exists");
         }
@@ -89,31 +92,95 @@ public class ProjectServiceImpl implements ProjectService{
         projectMember.setJoinedAt(LocalDate.now());
         projectMemberRepository.save(projectMember);
 
-        return convertToProjectDTO(project);
+        return convertToProjectDTO(project, currentUser.getId());
     }
 
     @Override
     public ProjectDTO getById(Long id) throws NoProjectFoundException {
+        User currentUser = authService.getCurrentUser();
         Project project = projectRepository
                 .findById(id)
                 .orElseThrow(() -> new NoProjectFoundException("Unable to fetch project"));
-        return convertToProjectDTO(project);
+
+        boolean isMember = project.getProjectMembers()
+                .stream()
+                .anyMatch(member -> member.getUser().getId().equals(currentUser.getId()));
+
+        if (!isMember) {
+            throw new UnauthorizedAccessException("You are not authorized to view this project");
+        }
+        return convertToProjectDTO(project, currentUser.getId());
     }
 
+    public List<ProjectDTO> getProjectsForCurrentUser() {
+        User currentUser = authService.getCurrentUser();
+        List<ProjectMember> projectMemberships = projectMemberRepository.findAllByUserIdWithProjectsAndRoles(currentUser.getId());
+
+        // Sort by role priority: Admin → Manager → User
+        return projectMemberships.stream()
+                .sorted(Comparator.comparingInt(member -> getRolePriority(member.getRole().getName())))
+                .map(member -> DTOConverter.convertToProjectDTO(member.getProject(), currentUser.getId())) // Pass current user ID
+                .collect(Collectors.toList());
+    }
+
+
+    private int getRolePriority(String roleName) {
+        return switch (roleName.toLowerCase()) {
+            case "admin" -> 1;
+            case "manager" -> 2;
+            case "user" -> 3;
+            default -> 4; // Unknown roles have the lowest priority
+        };
+    }
+
+
     @Override
-    public ProjectDTO updateProject(Long id, UpdateProjectDTO updateProjectDTO) throws NoProjectFoundException {
-        Project project = projectRepository.findById(id)
-                .orElseThrow(() -> new NoProjectFoundException("No such project found"));
-        project.setName(updateProjectDTO.getName());
-        if(!updateProjectDTO.getDescription().isEmpty()){
+    public ProjectDTO updateProject(Long projectId, UpdateProjectDTO updateProjectDTO) throws ResourceNotFoundException {
+        // Fetch the project by ID
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new ResourceNotFoundException("Project with ID " + projectId + " not found."));
+
+        // Fetch the current user
+        User currentUser = authService.getCurrentUser();
+
+        // Validate if the user is part of the project
+        if (validateProjectMembership(projectId, currentUser.getId())) {
+            throw new UnauthorizedAccessException("You are not part of this project");
+        }
+
+        // Fetch the current user's project membership
+        ProjectMember currentMember = projectMemberRepository
+                .findByUserIdAndProjectId(currentUser.getId(), projectId)
+                .orElseThrow(() -> new UnauthorizedAccessException("You are not a member of this project"));
+
+        // Check if the user has the required role to update the project
+        if (!currentMember.getRole().getName().equalsIgnoreCase("ADMIN") &&
+                !currentMember.getRole().getName().equalsIgnoreCase("MANAGER")) {
+            throw new UnauthorizedAccessException("You do not have permission to update this project");
+        }
+
+        // Update project fields if provided in the DTO
+        if (updateProjectDTO.getName() != null && !updateProjectDTO.getName().isEmpty()) {
+            project.setName(updateProjectDTO.getName());
+        }
+        if (updateProjectDTO.getDescription() != null && !updateProjectDTO.getDescription().isEmpty()) {
             project.setDescription(updateProjectDTO.getDescription());
         }
-        project.setStartDate(updateProjectDTO.getStartDate());
-        if(updateProjectDTO.getEndDate() != null){
+        if (updateProjectDTO.getStartDate() != null) {
+            project.setStartDate(updateProjectDTO.getStartDate());
+        }
+        if (updateProjectDTO.getEndDate() != null) {
             project.setEndDate(updateProjectDTO.getEndDate());
         }
-        return convertToProjectDTO(project);
+
+        // Save the updated project
+        projectRepository.save(project);
+
+        // Convert and return the updated project as a DTO
+        return DTOConverter.convertToProjectDTO(project, currentUser.getId());
     }
+
+
 
     @Override
     public boolean deleteProject(Long id) {
@@ -125,12 +192,18 @@ public class ProjectServiceImpl implements ProjectService{
         return true;
     }
 
+
     @Override
     public List<ProjectDTO> getAllProject() {
-        return projectRepository.findAll().stream().map(DTOConverter::convertToProjectDTO).toList();
+        User currentUser = authService.getCurrentUser();
+        return projectRepository.findAll().stream().map(project -> convertToProjectDTO(project, currentUser.getId())).toList();
     }
 
     public boolean existsById(Long id){
         return projectRepository.existsById(id);
+    }
+
+    public boolean validateProjectMembership(Long projectId, Long userId) {
+        return !projectMemberRepository.existsByProjectIdAndUserId(projectId, userId);
     }
 }
