@@ -10,8 +10,6 @@ import java.time.LocalDate;
 @Getter
 @Setter
 public class UpdateProjectDTO {
-    @NotNull(message = "No project associated")
-    private Long id;
     @NotEmpty(message = "Project Name is required")
     private String name;
     private String description;
