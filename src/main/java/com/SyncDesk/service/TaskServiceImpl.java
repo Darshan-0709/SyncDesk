@@ -65,7 +65,10 @@ public class TaskServiceImpl implements TaskService {
                 .findById(projectId)
                 .orElseThrow(() -> new ResourceNotFoundException("Project with ID " + projectId + " not found."));
 
+        System.out.println("project id: "+ project.getId());
         User user = authService.getCurrentUser();
+        System.out.println("user: " + user.getEmail());
+
 
         if (validateProjectMembership(projectId, user.getId())) {
             throw new UnauthorizedAccessException("You are not a part of this project.");
@@ -78,13 +81,13 @@ public class TaskServiceImpl implements TaskService {
         }
         task.setProject(project);
         if (createTaskDTO.getAssignedTo() != null) {
-            ProjectMember assignedMember = getMemberById(createTaskDTO.getAssignedTo());
+            ProjectMember assignedMember = getMemberById(createTaskDTO.getAssignedTo(), projectId);
             if (validateProjectMembership(projectId, assignedMember.getUser().getId())) {
                 throw new ResourceNotFoundException("Assigned member does not exist in the project.");
             }
             task.setAssignedTo(assignedMember);
         }
-        task.setCreatedBy(getMemberById(user.getId()));
+        task.setCreatedBy(getMemberById(user.getId(), projectId));
         task.setPriority(createTaskDTO.getPriority() != null
                 ? TaskPriority.valueOf(createTaskDTO.getPriority())
                 : TaskPriority.LOW);
@@ -133,7 +136,7 @@ public class TaskServiceImpl implements TaskService {
         }
 
         if (updateTaskDTO.getAssignedTo() != null) {
-            ProjectMember assignedMember = getMemberById(updateTaskDTO.getAssignedTo());
+            ProjectMember assignedMember = getMemberById(updateTaskDTO.getAssignedTo(), projectId);
             if (validateProjectMembership(projectId, assignedMember.getUser().getId())) {
                 throw new RuntimeException("Assigned member does not exist in this project");
             }
@@ -164,14 +167,6 @@ public class TaskServiceImpl implements TaskService {
                 .findByUserIdAndProjectId(currentUser.getId(), projectId)
                 .orElseThrow(() -> new UnauthorizedAccessException("You are not part of this project"));
 
-
-        System.out.println("Current User ID: " + currentUser.getId());
-        System.out.println("Project ID: " + projectId);
-        System.out.println("Task ID: " + taskId);
-        System.out.println("Current Member Role: " + currentMember.getRole().getName());
-        System.out.println("Task Created By User ID: " + task.getCreatedBy().getUser().getId());
-        System.out.println("Assigned To: " + task.getAssignedTo());
-
         if (!currentMember.getRole().getName().equalsIgnoreCase("ADMIN") &&
                 !currentMember.getRole().getName().equalsIgnoreCase("MANAGER")) {
 
@@ -195,13 +190,14 @@ public class TaskServiceImpl implements TaskService {
         return projectRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("No project found with the provided ID"));
     }
-    private ProjectMember getMemberById(Long id) {
-        return projectMemberRepository.findByUserId(id)
+    private ProjectMember getMemberById(Long id, Long projectId) {
+        return projectMemberRepository.findByUserIdAndProjectId(id, projectId)
                 .orElseThrow(() -> new RuntimeException("Provided user is not a member of this project"));
     }
 
     public boolean validateProjectMembership(Long projectId, Long userId) {
-        return !projectMemberRepository.existsByProjectIdAndUserId(projectId, userId);
-
+        ProjectMember projectMember = getMemberById(userId, projectId);
+        System.out.println("memberId : " + projectMember.getId());
+        return !projectMemberRepository.existsByProjectIdAndUserId(projectId, projectMember.getId());
     }
 }
