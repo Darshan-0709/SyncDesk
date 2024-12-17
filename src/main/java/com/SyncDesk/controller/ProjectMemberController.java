@@ -38,8 +38,22 @@ public class ProjectMemberController {
         }
     }
 
+    @GetMapping("/{id}/member")
+    public ResponseEntity<ApiResponse<ProjectMemberDTO>> getAllMember(@PathVariable Long id) {
+        try {
+            ProjectMemberDTO projectMemberDTO = projectMemberService.getOneByProjectId(id);
+            return ResponseEntity.ok(new ApiResponse<>("Members fetched successfully", projectMemberDTO));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new ApiResponse<>(e.getMessage(), null));
+        }
+    }
+
     @PostMapping("/{id}")
     public ResponseEntity<ApiResponse<ProjectMemberDTO>> addMember(@PathVariable Long id, @Valid @RequestBody AddMemberDTO addMemberDTO){
+        System.out.println(id);
+        System.out.println(addMemberDTO.getRole());
+        System.out.println(addMemberDTO.getEmail());
         try {
             ProjectMemberDTO projectMembersDTO = projectMemberService.addMember(id, addMemberDTO);
             return ResponseEntity.ok(new ApiResponse<>("New member added successfully",projectMembersDTO));
@@ -51,9 +65,9 @@ public class ProjectMemberController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ApiResponse<ProjectMemberDTO>> editMember(@PathVariable Long id, @RequestParam String newRole) {
+    public ResponseEntity<ApiResponse<ProjectMemberDTO>> editMember(@PathVariable Long id, @Valid @RequestBody ChangeRoleDTO changeRoleDTO) {
         try {
-            ProjectMemberDTO projectMemberDTO = projectMemberService.editMember(id, newRole);
+            ProjectMemberDTO projectMemberDTO = projectMemberService.editMember(id, changeRoleDTO);
             return ResponseEntity.ok(new ApiResponse<>("Role updated successfully", projectMemberDTO));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
