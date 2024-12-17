@@ -23,8 +23,8 @@ public class CreateTaskDTO {
     @Pattern(regexp = "LOW|MEDIUM|HIGH", message = "Priority must be LOW, MEDIUM, or HIGH.")
     private String priority;
 
-    @Pattern(regexp = "TO_DO|IN_PROGRESS|COMPLETED|BLOCKED",
-            message = "Status must be PENDING, IN_PROGRESS, COMPLETED, or BLOCKED.")
+    @Pattern(regexp = "TO_DO|IN_PROGRESS|COMPLETED",
+            message = "Status must be PENDING, IN_PROGRESS, COMPLETED")
     private String status;
 
     @NotNull(message = "Due date is required.")
