@@ -12,5 +12,5 @@ import java.util.Optional;
 public interface ProjectMemberService {
     List<ProjectMemberDTO> getAllByProjectId(Long id) throws NoProjectFoundException;
     ProjectMemberDTO addMember(Long id, AddMemberDTO member);
-    ProjectMemberDTO editMember(Long id, String newRole);
+    ProjectMemberDTO editMember(Long id, ChangeRoleDTO changeRoleDTO);
 }
