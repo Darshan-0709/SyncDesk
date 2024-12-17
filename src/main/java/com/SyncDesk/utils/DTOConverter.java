@@ -9,6 +9,9 @@ import com.SyncDesk.entity.ProjectMember;
 import com.SyncDesk.entity.Task;
 import com.SyncDesk.entity.User;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 public class DTOConverter {
 
     public static UserDTO convertToUserDTO(User user) {
@@ -19,7 +22,7 @@ public class DTOConverter {
         return userDTO;
     }
 
-    public static ProjectDTO convertToProjectDTO(Project project) {
+    public static ProjectDTO convertToProjectDTO(Project project, Long currentUserId) {
         ProjectDTO projectDTO = new ProjectDTO();
         projectDTO.setId(project.getId());
         projectDTO.setName(project.getName());
@@ -28,7 +31,7 @@ public class DTOConverter {
             projectDTO.setDescription(project.getDescription());
         }
 
-        // Use the static UserDTO converter
+        // Use the static UserDTO converter for the admin
         UserDTO userDTO = convertToUserDTO(project.getUser());
         projectDTO.setAdmin(userDTO);
 
@@ -38,8 +41,31 @@ public class DTOConverter {
             projectDTO.setEndDate(project.getEndDate());
         }
 
+        // Convert project members to ProjectMemberDTOs
+        if (project.getProjectMembers() != null) {
+            List<ProjectMemberDTO> memberDTOs = project.getProjectMembers().stream().map(member -> {
+                ProjectMemberDTO memberDTO = new ProjectMemberDTO();
+                memberDTO.setId(member.getId());
+                memberDTO.setUser(convertToUserDTO(member.getUser())); // Convert User to UserDTO
+                memberDTO.setRoleName(member.getRole().getName()); // Set role name
+                memberDTO.setProjectId(member.getProject().getId());
+                memberDTO.setJoinedAt(member.getJoinedAt());
+                return memberDTO;
+            }).collect(Collectors.toList());
+            projectDTO.setMembers(memberDTOs);
+        }
+
+        // Set the role of the current user in this project
+        String currentUserRole = project.getProjectMembers().stream()
+                .filter(member -> member.getUser().getId().equals(currentUserId)) // Match the current user
+                .map(member -> member.getRole().getName()) // Extract role name
+                .findFirst()
+                .orElse(null); // Handle cases where user isn't a member
+        projectDTO.setUserRole(currentUserRole);
+
         return projectDTO;
     }
+
 
     public static ProjectMemberDTO convertToProjectMemberDTO(ProjectMember projectMember) {
         ProjectMemberDTO projectMemberDTO = new ProjectMemberDTO();
@@ -61,6 +87,7 @@ public class DTOConverter {
                 .dueDate(task.getDueDate())
                 .createdBy(task.getCreatedBy() != null ? convertToUserDTO(task.getCreatedBy().getUser()) : null)
                 .assignedTo(task.getAssignedTo() != null ? convertToUserDTO(task.getAssignedTo().getUser()) : null)
+                .projectId(task.getProject().getId())
                 .build();
     }
 
