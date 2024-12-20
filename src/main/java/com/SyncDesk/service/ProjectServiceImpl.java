@@ -92,34 +92,39 @@ public class ProjectServiceImpl implements ProjectService{
         projectMember.setJoinedAt(LocalDate.now());
         projectMemberRepository.save(projectMember);
 
-        return convertToProjectDTO(project, currentUser.getId());
+        String currentUserRole = "ADMIN";
+        return convertToProjectDTO(project, currentUser.getId(), currentUserRole);
     }
 
     @Override
     public ProjectDTO getById(Long id) throws NoProjectFoundException {
         User currentUser = authService.getCurrentUser();
+        ProjectMember currentMember = projectMemberRepository.findByUserIdAndProjectId(currentUser.getId(), id)
+                .orElseThrow(() -> new UnauthorizedAccessException("You are not authorized to view this project"));
+
         Project project = projectRepository
                 .findById(id)
                 .orElseThrow(() -> new NoProjectFoundException("Unable to fetch project"));
-
-        boolean isMember = project.getProjectMembers()
-                .stream()
-                .anyMatch(member -> member.getUser().getId().equals(currentUser.getId()));
-
-        if (!isMember) {
-            throw new UnauthorizedAccessException("You are not authorized to view this project");
-        }
-        return convertToProjectDTO(project, currentUser.getId());
+//
+//        boolean isMember = project.getProjectMembers()
+//                .stream()
+//                .anyMatch(member -> member.getUser().getId().equals(currentUser.getId()));
+//
+//        if (!isMember) {
+//            throw new UnauthorizedAccessException("You are not authorized to view this project");
+//        }
+        return convertToProjectDTO(project, currentUser.getId(), currentMember.getRole().getName());
     }
 
     public List<ProjectDTO> getProjectsForCurrentUser() {
         User currentUser = authService.getCurrentUser();
         List<ProjectMember> projectMemberships = projectMemberRepository.findAllByUserIdWithProjectsAndRoles(currentUser.getId());
-
+//        ProjectMember currentMember = projectMemberRepository.findByUserIdAndProjectId(currentUser.getId(), id)
+//                .orElseThrow(() -> new UnauthorizedAccessException("You are not authorized to view this project"));
         // Sort by role priority: Admin → Manager → User
         return projectMemberships.stream()
                 .sorted(Comparator.comparingInt(member -> getRolePriority(member.getRole().getName())))
-                .map(member -> DTOConverter.convertToProjectDTO(member.getProject(), currentUser.getId())) // Pass current user ID
+                .map(member -> DTOConverter.convertToProjectDTO(member.getProject(), currentUser.getId(), member.getRole().getName()))
                 .collect(Collectors.toList());
     }
 
@@ -177,7 +182,7 @@ public class ProjectServiceImpl implements ProjectService{
         projectRepository.save(project);
 
         // Convert and return the updated project as a DTO
-        return DTOConverter.convertToProjectDTO(project, currentUser.getId());
+        return DTOConverter.convertToProjectDTO(project, currentUser.getId(), currentMember.getRole().getName());
     }
 
 
@@ -193,11 +198,11 @@ public class ProjectServiceImpl implements ProjectService{
     }
 
 
-    @Override
-    public List<ProjectDTO> getAllProject() {
-        User currentUser = authService.getCurrentUser();
-        return projectRepository.findAll().stream().map(project -> convertToProjectDTO(project, currentUser.getId())).toList();
-    }
+//    @Override
+//    public List<ProjectDTO> getAllProject() {
+//        User currentUser = authService.getCurrentUser();
+//        return projectRepository.findAll().stream().map(project -> convertToProjectDTO(project, currentUser.getId())).toList();
+//    }
 
     public boolean existsById(Long id){
         return projectRepository.existsById(id);
