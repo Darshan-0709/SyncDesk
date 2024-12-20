@@ -65,9 +65,7 @@ public class TaskServiceImpl implements TaskService {
                 .findById(projectId)
                 .orElseThrow(() -> new ResourceNotFoundException("Project with ID " + projectId + " not found."));
 
-        System.out.println("project id: "+ project.getId());
         User user = authService.getCurrentUser();
-        System.out.println("user: " + user.getEmail());
 
 
         if (validateProjectMembership(projectId, user.getId())) {
@@ -81,13 +79,12 @@ public class TaskServiceImpl implements TaskService {
         }
         task.setProject(project);
         if (createTaskDTO.getAssignedTo() != null) {
-            ProjectMember assignedMember = getMemberById(createTaskDTO.getAssignedTo(), projectId);
-            if (validateProjectMembership(projectId, assignedMember.getUser().getId())) {
-                throw new ResourceNotFoundException("Assigned member does not exist in the project.");
-            }
+            ProjectMember assignedMember = validateAndGetAssignedMember(createTaskDTO.getAssignedTo(), projectId);
             task.setAssignedTo(assignedMember);
         }
-        task.setCreatedBy(getMemberById(user.getId(), projectId));
+
+        task.setCreatedBy(getMemberByUserId(user.getId(), projectId));
+
         task.setPriority(createTaskDTO.getPriority() != null
                 ? TaskPriority.valueOf(createTaskDTO.getPriority())
                 : TaskPriority.LOW);
@@ -114,7 +111,7 @@ public class TaskServiceImpl implements TaskService {
 
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new ResourceNotFoundException("Task with ID " + taskId + " not found."));
-
+        System.out.println("Task found: " + task.getId());
         if (!Objects.equals(task.getProject().getId(), projectId)) {
             throw new ResourceNotFoundException("Task does not belong to the project");
         }
@@ -136,10 +133,7 @@ public class TaskServiceImpl implements TaskService {
         }
 
         if (updateTaskDTO.getAssignedTo() != null) {
-            ProjectMember assignedMember = getMemberById(updateTaskDTO.getAssignedTo(), projectId);
-            if (validateProjectMembership(projectId, assignedMember.getUser().getId())) {
-                throw new RuntimeException("Assigned member does not exist in this project");
-            }
+            ProjectMember assignedMember = validateAndGetAssignedMember(updateTaskDTO.getAssignedTo(), projectId);
             task.setAssignedTo(assignedMember);
         }
 
@@ -149,55 +143,67 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
-    public void deleteTask(Long projectId, Long taskId) throws ResourceNotFoundException  {
+    public void deleteTask(Long projectId, Long taskId) throws ResourceNotFoundException {
         User currentUser = authService.getCurrentUser();
 
         if (validateProjectMembership(projectId, currentUser.getId())) {
-            throw new   UnauthorizedAccessException("You are not authorized to perform this action");
+            throw new UnauthorizedAccessException("You are not authorized to perform this action.");
         }
 
         Task task = taskRepository.findById(taskId)
-                .orElseThrow(() -> new ResourceNotFoundException("Task with ID " + taskId + " not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Task with ID " + taskId + " not found."));
 
         if (!Objects.equals(task.getProject().getId(), projectId)) {
-            throw new ResourceNotFoundException("Task does not belong to the specified project");
+            throw new ResourceNotFoundException("Task does not belong to the specified project.");
         }
 
-        ProjectMember currentMember = projectMemberRepository
-                .findByUserIdAndProjectId(currentUser.getId(), projectId)
-                .orElseThrow(() -> new UnauthorizedAccessException("You are not part of this project"));
+        ProjectMember currentMember = getMemberByUserId(currentUser.getId(), projectId);
 
-        if (!currentMember.getRole().getName().equalsIgnoreCase("ADMIN") &&
-                !currentMember.getRole().getName().equalsIgnoreCase("MANAGER")) {
-
-            if (currentMember.getRole().getName().equalsIgnoreCase("MEMBER")) {
-                if (!task.getCreatedBy().getUser().getId().equals(currentMember.getUser().getId()) &&
-                        !(task.getAssignedTo() == null)) {
-                    throw new UnauthorizedAccessException("You do not have permission to delete this task");
-                }
-            } else {
-                throw new UnauthorizedAccessException("You do not have permission to delete this task");
+        if (!isAdminOrManager(currentMember)) {
+            // Check if the user is a MEMBER and either created or was assigned the task
+            boolean isCreatorOrAssignee = isTaskCreatorOrAssignee(currentMember, task);
+            if (!isCreatorOrAssignee) {
+                throw new UnauthorizedAccessException("You do not have permission to delete this task.");
             }
         }
-
 
         taskRepository.delete(task);
     }
 
+    private ProjectMember validateAndGetAssignedMember(Long assignedToId, Long projectId) {
+        if (assignedToId == null) {
+            return null;
+        }
+        return getMemberById(assignedToId, projectId);
+    }
 
 
     private Project getProjectById(Long id) {
         return projectRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("No project found with the provided ID"));
     }
-    private ProjectMember getMemberById(Long id, Long projectId) {
+    private ProjectMember getMemberByUserId(Long id, Long projectId) {
         return projectMemberRepository.findByUserIdAndProjectId(id, projectId)
-                .orElseThrow(() -> new RuntimeException("Provided user is not a member of this project"));
+                .orElseThrow(() -> new RuntimeException("Unauthorized: You are not part of the project"));
+    }
+    private ProjectMember getMemberById(Long id, Long projectId) {
+        return projectMemberRepository.findByIdAndProjectId(id, projectId)
+                .orElseThrow(() -> new RuntimeException("Provided user is not a member of this project (MemberId: " + id + ")"));
     }
 
     public boolean validateProjectMembership(Long projectId, Long userId) {
-        ProjectMember projectMember = getMemberById(userId, projectId);
-        System.out.println("memberId : " + projectMember.getId());
-        return !projectMemberRepository.existsByProjectIdAndUserId(projectId, projectMember.getId());
+        return !projectMemberRepository.existsByProjectIdAndUserId(projectId, userId);
     }
+
+    private boolean isAdminOrManager(ProjectMember member) {
+        String roleName = member.getRole().getName().toUpperCase();
+        return "ADMIN".equals(roleName) || "MANAGER".equals(roleName);
+    }
+
+    private boolean isTaskCreatorOrAssignee(ProjectMember member, Task task) {
+        Long memberId = member.getUser().getId();
+        return (task.getCreatedBy().getUser().getId().equals(memberId)) ||
+                (task.getAssignedTo() != null && task.getAssignedTo().getUser().getId().equals(memberId));
+    }
+
 }
