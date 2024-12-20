@@ -15,7 +15,8 @@ public interface ProjectMemberRepository extends JpaRepository<ProjectMember, Lo
     Optional<ProjectMember> findByUserId(Long id);
 
     boolean existsByProjectIdAndUserId(Long project, Long memberToAdd);
-    Optional<ProjectMember> findByUserIdAndProjectId(Long id, Long projectId);
+    Optional<ProjectMember> findByUserIdAndProjectId(Long userId, Long projectId);
+    Optional<ProjectMember> findByIdAndProjectId(Long id, Long projectId);
     @Query("SELECT pm FROM ProjectMember pm " +
             "JOIN FETCH pm.project p " +
             "JOIN FETCH pm.role r " +
