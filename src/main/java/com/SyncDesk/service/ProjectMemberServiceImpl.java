@@ -53,21 +53,16 @@ public class ProjectMemberServiceImpl implements ProjectMemberService{
 
     @Override
     @Transactional
-    public ProjectMemberDTO addMember(Long id, AddMemberDTO member) {
+    public ProjectMemberDTO addMember(Long projectId, AddMemberDTO member) {
         validateRole(member.getRole());
-        ProjectMember currentMember = getCurrentMember(id);
+        ProjectMember currentMember = getCurrentMember(projectId);
         System.out.println();
         System.out.println();
         System.out.println(currentMember.getUser().getEmail());
 
-        Project project = getProjectById(id);
+        Project project = getProjectById(projectId);
         System.out.println(project.getId());
-        System.out.println();
-        System.out.println();
         Role memberRole = getMemberRole(member.getRole());
-        System.out.println(memberRole.getName());
-
-
 
         if (!isAuthorized(currentMember.getRole().getName())) {
             System.out.println("Only admins or project managers can add new members.");
@@ -94,17 +89,16 @@ public class ProjectMemberServiceImpl implements ProjectMemberService{
 
     @Override
     public ProjectMemberDTO editMember(Long id, ChangeRoleDTO changeRoleDTO) {
-
+        System.out.println(changeRoleDTO.getId());
         ProjectMember currentMember = getCurrentMember(id);
-        System.out.println("current member id: " +currentMember.getId());
-
+        System.out.println("current member id: " + currentMember.getId());
         Role memberRole = getMemberRole(changeRoleDTO.getRole());
-        System.out.println("dtoRole: " + currentMember.getRole().getName());
+
         if (!isAuthorized(currentMember.getRole().getName(), memberRole.getName())) {
             throw new RuntimeException("Only admins or project managers can change members role.");
         }
 
-        ProjectMember memberToChange = projectMemberRepository.findByUserIdAndProjectId(changeRoleDTO.getId(), id)
+        ProjectMember memberToChange = projectMemberRepository.findByIdAndProjectId(changeRoleDTO.getId(), id)
                 .orElseThrow(() ->  new RuntimeException("No member found"));
         System.out.println("member to change: " + memberToChange.getUser().getEmail());
 
