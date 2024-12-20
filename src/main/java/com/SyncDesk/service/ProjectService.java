@@ -13,6 +13,6 @@ public interface ProjectService {
     ProjectDTO createProject(CreateProjectDTO createProjectDTO) throws ProjectAlreadyExistsException;
     ProjectDTO updateProject(Long id, UpdateProjectDTO updateProjectDTO) throws NoProjectFoundException, ResourceNotFoundException;
     boolean deleteProject(Long id);
-    List<ProjectDTO> getAllProject();
+//    List<ProjectDTO> getAllProject();
     ProjectDTO getById(Long id) throws NoProjectFoundException;
 }
