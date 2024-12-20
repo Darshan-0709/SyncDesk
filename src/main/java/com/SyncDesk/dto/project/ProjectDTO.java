@@ -18,6 +18,6 @@ public class ProjectDTO {
     private String description;
     private LocalDate startDate;
     private LocalDate endDate;
-    private List<ProjectMemberDTO> members;
+//    private List<ProjectMemberDTO> members;
 }
 
