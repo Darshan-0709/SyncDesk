@@ -39,7 +39,7 @@ public class ProjectMemberController {
     }
 
     @GetMapping("/{id}/member")
-    public ResponseEntity<ApiResponse<ProjectMemberDTO>> getAllMember(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<ProjectMemberDTO>> getMember(@PathVariable Long id) {
         try {
             ProjectMemberDTO projectMemberDTO = projectMemberService.getOneByProjectId(id);
             return ResponseEntity.ok(new ApiResponse<>("Members fetched successfully", projectMemberDTO));
