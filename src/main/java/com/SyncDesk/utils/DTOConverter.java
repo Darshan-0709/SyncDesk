@@ -22,7 +22,7 @@ public class DTOConverter {
         return userDTO;
     }
 
-    public static ProjectDTO convertToProjectDTO(Project project, Long currentUserId) {
+    public static ProjectDTO convertToProjectDTO(Project project, Long currentUserId, String currentUserRole) {
         ProjectDTO projectDTO = new ProjectDTO();
         projectDTO.setId(project.getId());
         projectDTO.setName(project.getName());
@@ -42,26 +42,27 @@ public class DTOConverter {
         }
 
         // Convert project members to ProjectMemberDTOs
-        if (project.getProjectMembers() != null) {
-            List<ProjectMemberDTO> memberDTOs = project.getProjectMembers().stream().map(member -> {
-                ProjectMemberDTO memberDTO = new ProjectMemberDTO();
-                memberDTO.setId(member.getId());
-                memberDTO.setUser(convertToUserDTO(member.getUser())); // Convert User to UserDTO
-                memberDTO.setRoleName(member.getRole().getName()); // Set role name
-                memberDTO.setProjectId(member.getProject().getId());
-                memberDTO.setJoinedAt(member.getJoinedAt());
-                return memberDTO;
-            }).collect(Collectors.toList());
-            projectDTO.setMembers(memberDTOs);
-        }
+//        if (project.getProjectMembers() != null) {
+//            List<ProjectMemberDTO> memberDTOs = project.getProjectMembers().stream().map(member -> {
+//                ProjectMemberDTO memberDTO = new ProjectMemberDTO();
+//                memberDTO.setId(member.getId());
+//                memberDTO.setUser(convertToUserDTO(member.getUser())); // Convert User to UserDTO
+//                memberDTO.setRoleName(member.getRole().getName()); // Set role name
+//                memberDTO.setProjectId(member.getProject().getId());
+//                memberDTO.setJoinedAt(member.getJoinedAt());
+//                return memberDTO;
+//            }).collect(Collectors.toList());
+//            projectDTO.setMembers(memberDTOs);
+//        }
 
         // Set the role of the current user in this project
-        String currentUserRole = project.getProjectMembers().stream()
-                .filter(member -> member.getUser().getId().equals(currentUserId)) // Match the current user
-                .map(member -> member.getRole().getName()) // Extract role name
-                .findFirst()
-                .orElse(null); // Handle cases where user isn't a member
+//        String currentUserRole = project.getProjectMembers().stream()
+//                .filter(member -> member.getUser().getId().equals(currentUserId)) // Match the current user
+//                .map(member -> member.getRole().getName()) // Extract role name
+//                .findFirst()
+//                .orElse(null); // Handle cases where user isn't a member
         projectDTO.setUserRole(currentUserRole);
+//        String currentUserRole = project
 
         return projectDTO;
     }
